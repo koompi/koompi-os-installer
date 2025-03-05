@@ -1,121 +1,126 @@
+import { GlobeDemo } from "@/components/BannerGlobe";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	ResizableHandle,
-	ResizablePanel,
-	ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { useEffect, useRef } from "react";
-import {
-	getPanelElement,
-	getPanelGroupElement,
-	getResizeHandleElement,
-} from "react-resizable-panels";
+import { BlockDeviceInfo } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
 
 export default function Home() {
-	// const refs = useRef();
+  const [config, setConfig] = useState({
+    user: "",
+    passwd: "",
+    disk: "",
+  });
 
-	useEffect(() => {
-		// const groupElement = getPanelGroupElement("group");
-		const bootPanel = getPanelElement("boot");
-		const rootPanel = getPanelElement("root");
-		const homePanel = getPanelElement("home");
+  const { data, status, error } = useQuery({
+    queryKey: ["block_devices"],
+    queryFn: async () => {
+      return (await invoke("get_block_devices")) as BlockDeviceInfo;
+    },
+  });
 
-		console.log(bootPanel);
-		console.log(rootPanel?.getSize());
-		console.log(homePanel);
+  if (status === "pending") {
+    return <div>Loading</div>;
+  }
 
-		// refs.current = {
-		// 	groupElement,
-		// 	bootPanel,
-		// 	rootPanel,
-		// 	homePanel,
-		// };
-	}, []);
-	return (
-		<>
-			<div className="w-lg space-y-2 mx-auto p-4 h-auto">
-				<div className="space-y-2">
-					<h2>Root</h2>
-					<Input placeholder="Password" />
-					<Input placeholder="Confirm password" />
-				</div>
-				<div className="space-y-2">
-					<h2>User</h2>
-					<Input placeholder="User" />
-					<Input placeholder="Password" />
-					<Input placeholder="Confirm password" />
-					<Label className="py-2">
-						<Checkbox /> <span>Allow to use sudo</span>
-					</Label>
-					<Button className="w-full">NEXT</Button>
-				</div>
+  if (status === "error") {
+    return <div>{error.message}</div>;
+  }
 
-				<div className="space-y-2">
-					<h2>Select Disk</h2>
-					<Label className="border p-2 rounded-sm">
-						<Checkbox /> <span>/dev/sda</span>
-					</Label>
-					<Label className="border p-2 rounded-sm">
-						<Checkbox /> <span>/dev/sdb</span>
-					</Label>
-					<Label className="border p-2 rounded-sm">
-						<Checkbox /> <span>/dev/nvme0n1</span>
-					</Label>
-				</div>
+  return (
+    <>
+      <div className="w-lg space-y-6 mx-auto p-4 h-auto">
+        <GlobeDemo />
+        <div className="space-y-2">
+          <h2 className="font-black text-muted-foreground">Select Disk</h2>
+          {data.blockdevices
+            .filter(
+              (block) =>
+                block.type === "disk" &&
+                block.size.includes("G") &&
+                parseFloat(block.size.replace("G", "")) > 32 &&
+                (block.name.startsWith("nvme") ||
+                  block.name.startsWith("sd") ||
+                  block.name.startsWith("mmc"))
+            )
+            .map((block) => (
+              <Label
+                className="border p-2 rounded-sm flex place-content-between"
+                key={block.name}
+              >
+                <div className="flex gap-2 place-items-center">
+                  <Checkbox
+                    checked={config.disk === block.name}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setConfig({
+                          ...config,
+                          disk: block.name,
+                        });
+                      }
+                    }}
+                  />{" "}
+                  <div className="flex flex-col gap-1">
+                    <span>{block.model}</span>
+                    <span>/dev/{block.name}</span>
+                  </div>
+                </div>
+                <span>{block.size}</span>
+              </Label>
+            ))}
+        </div>
 
-				<div className="space-y-2">
-					<h2>Create Partition</h2>
-					<Label className="border p-2 rounded-sm flex place-content-between">
-						<span>/boot/efi</span>
-						<div className="space-x-4">
-							<span>5%</span>
-							<span>ext4</span>
-						</div>
-					</Label>
-					<Label className="border p-2 rounded-sm flex place-content-between">
-						<span>/</span>
-						<div className="space-x-4">
-							<span>20%</span>
-							<span>ext4</span>
-						</div>
-					</Label>
-					<Label className="border p-2 rounded-sm flex place-content-between">
-						<span>/home</span>
-						<div className="space-x-4">
-							<span>75%</span>
-							<span>ext4</span>
-						</div>
-					</Label>
-				</div>
+        <div className="space-y-2">
+          <h2 className="font-black text-muted-foreground">Partition Table</h2>
+          <Label className="border p-2 rounded-sm flex place-content-between">
+            <span>/boot/efi</span>
+            <div className="space-x-4">
+              <span>1%</span>
+              <span>ext4</span>
+            </div>
+          </Label>
+          <Label className="border p-2 rounded-sm flex place-content-between">
+            <span>/</span>
+            <div className="space-x-4">
+              <span>30%</span>
+              <span>ext4</span>
+            </div>
+          </Label>
+          <Label className="border p-2 rounded-sm flex place-content-between">
+            <span>/home</span>
+            <div className="space-x-4">
+              <span>69%</span>
+              <span>ext4</span>
+            </div>
+          </Label>
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-black text-muted-foreground">User Account</h2>
+          <Input
+            placeholder="User"
+            value={config.user}
+            onChange={(e) => setConfig({ ...config, user: e.target.value })}
+          />
+          <Input
+            placeholder="Password"
+            value={config.passwd}
+            onChange={(e) => setConfig({ ...config, passwd: e.target.value })}
+          />
+        </div>
 
-				<ResizablePanelGroup
-					direction="vertical"
-					className="min-h-[200px] max-w-md rounded-lg border md:min-w-[450px]"
-					id="group"
-				>
-					<ResizablePanel defaultSize={25} id="boot">
-						<div className="flex h-full items-center justify-center p-6">
-							<span className="font-semibold">Sidebar</span>
-						</div>
-					</ResizablePanel>
-					<ResizableHandle withHandle />
-					<ResizablePanel defaultSize={75} id="root">
-						<div className="flex h-full items-center justify-center p-6">
-							<span className="font-semibold">Content</span>
-						</div>
-					</ResizablePanel>
-					<ResizableHandle withHandle />
-
-					<ResizablePanel defaultSize={75} id="home">
-						<div className="flex h-full items-center justify-center p-6">
-							<span className="font-semibold">Content</span>
-						</div>
-					</ResizablePanel>
-				</ResizablePanelGroup>
-			</div>
-		</>
-	);
+        <Button
+          className="w-full"
+          onClick={async () => {}}
+          disabled={
+            config.disk === "" || config.user === "" || config.passwd === ""
+          }
+        >
+          INSTALL
+        </Button>
+      </div>
+    </>
+  );
 }

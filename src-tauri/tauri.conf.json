@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "koompi-os-installer",
-        "width": 800,
-        "height": 600
+        "title": "KOOMPI OS Installer",
+        "width": 520,
+        "height": 780,
+        "resizable": false
       }
     ],
     "security": {
