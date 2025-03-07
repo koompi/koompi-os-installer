@@ -1,7 +1,20 @@
-# Tauri + React + Typescript
+# KOOMPI OS Installer
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+## Development
 
-## Recommended IDE Setup
+```
+pnpm i
+pnpm run tauri dev
+```
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Deployment
+
+```
+pnpm run tauri build
+
+# run as installer mode
+./src-tauri/target/release/koompi-os-installer installer
+
+# run as oem mode
+./src-tauri/target/release/koompi-os-installer oem
+```
